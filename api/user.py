@@ -61,7 +61,22 @@ class UserAPI:
             users = User.query.all()    # read/extract all users from database
             json_ready = [user.read() for user in users]  # prepare output in json
             return jsonify(json_ready)  # jsonify creates Flask response object, more specific to APIs than json.dumps
-    
+    class _Create(Resource):
+        def post(self):
+            body = request.get_json()
+            # Fetch data from the form
+            name = body.get('name')
+            uid = body.get('uid')
+            password = body.get('password')
+            if uid is not None:
+                new_user = User(name=name, uid=uid, password=password)
+            user = new_user.create()
+            if user:
+                return user.read()
+            return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+
+
+
     class _Security(Resource):
         def post(self):
             try:
