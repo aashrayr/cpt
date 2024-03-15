@@ -75,8 +75,8 @@ class UserAPI:
                 return {
                     "message": "Please provide user details",
                     "data": None,
-                    "error": "Bad request"
-                }, 400
+                    "error": "Not Admin User"
+                }, 403
             ''' Get Data '''
             uid = body.get('uid')
             if uid is None:
