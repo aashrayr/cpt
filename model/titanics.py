@@ -6,6 +6,8 @@ from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import pdb
+import ast
 
 # Define the TitanicRegression global variable
 titanic_regression = None
@@ -20,6 +22,8 @@ class TitanicRegression:
         self.y_train = None
         self.y_test = None
         self.encoder = None
+        self.initTitanic()  # Call initTitanic in the constructor
+
 
     def initTitanic(self):
         titanic_data = sns.load_dataset('titanic')
@@ -30,15 +34,16 @@ class TitanicRegression:
         self.td['alone'] = self.td['alone'].apply(lambda x: 1 if x == True else 0)
 
         # Encode categorical variables
-        self.enc = OneHotEncoder(handle_unknown='ignore')
-        self.enc.fit(self.td[['embarked']])
-        self.onehot = self.enc.transform(self.td[['embarked']]).toarray()
-        cols = ['embarked_' + val for val in self.enc.categories_[0]]
+        self.encoder = OneHotEncoder(handle_unknown='ignore')
+        self.encoder.fit(self.td[['embarked']])
+        self.onehot = self.encoder.transform(self.td[['embarked']]).toarray()
+        cols = ['embarked_' + val for val in self.encoder.categories_[0]]
         self.td[cols] = pd.DataFrame(self.onehot)
         self.td.drop(['embarked'], axis=1, inplace=True)
         self.td.dropna(inplace=True)
         print(self.td)
         # clean data
+
 
 
     def runDecisionTree(self):
@@ -52,35 +57,68 @@ class TitanicRegression:
 
         # more code here
 
-    def runLogisticRegression(self):
+    def runLogisticRegression(self, X, y):
         # more code here
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3, random_state=42)
         self.logreg = LogisticRegression()
         self.logreg.fit(self.X_train, self.y_train)
+        
+    def predictSurvival(self, passenger):
+        X = self.td.drop('survived', axis=1) # all except 'survived'
+        y = self.td['survived'] # only 'survived'
+        self.X_train, X_test, self.y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                
+        self.logreg = LogisticRegression()
+        self.logreg.fit(self.X_train, self.y_train)
+        
+        passenger = passenger['passenger']
+        passenger = list(passenger.values())
+        
+        passenger = pd.DataFrame({
+            'name': [passenger[0]],
+            'pclass': [passenger[1]],
+            'sex': [passenger[2]],
+            'age': [passenger[3]],
+            'sibsp': [passenger[4]],
+            'parch': [passenger[5]],
+            'fare': [passenger[6]],
+            'embarked': [passenger[7]],
+            'alone': [passenger[8]]
+        })
+        
+        passenger['sex'] = passenger['sex'].apply(lambda x: 1 if x == 'male' else 0)
+        passenger['alone'] = passenger['alone'].apply(lambda x: 1 if x == True else 0)
+        onehot = self.encoder.transform(passenger[['embarked']])
+        cols = ['embarked_' + val for val in self.encoder.categories_[0]]
+        print(passenger)
+        passenger[cols] = pd.DataFrame(onehot.toarray(), index=passenger.index)
+        passenger.drop(['name'], axis=1, inplace=True)
+        passenger.drop(['embarked'], axis=1, inplace=True)
+        
+        print(passenger)
+        # passenger_list = list(passenger["passenger"].values())
+
+        # passenger = np.asarray(passenger_list).reshape(1, -1)
+        # #preprocessing
+    
+        aliveProb = np.squeeze(self.logreg.predict_proba(passenger))
+        print(aliveProb)
+        aliveProb.tolist()
+        deathProb = aliveProb[0]
+        aliveProb = aliveProb[1]
+        
+        return 'Survival probability: {:.2%}'.format(aliveProb),('Death probability: {:.2%}'.format(deathProb))  
+
 
 def initTitanic():
     global titanic_regression
     titanic_regression = TitanicRegression()
     titanic_regression.initTitanic()
+    X = titanic_regression.td.drop('survived', axis=1)
+    y = titanic_regression.td['survived']
+    titanic_regression.runLogisticRegression(X, y)  #s  # Pass X and y to runLogisticRegression
+
 
 # From API
-def predictSurvival(self,passenger):
-    new_passenger = passenger.copy()
-    # Preprocess the new passenger data
-    new_passenger['sex'] = new_passenger['sex'].apply(lambda x: 1 if x == 'male' else 0)
-    new_passenger['alone'] = new_passenger['alone'].apply(lambda x: 1 if x == True else 0)
 
-    # Encode 'embarked' variable
-    self.onehot = self.enc.transform(new_passenger[['embarked']]).toarray()
-    cols = ['embarked_' + val for val in self.enc.categories_[0]]
-    new_passenger[cols] = pd.DataFrame(self.onehot, index=new_passenger.index)
-    new_passenger.drop(['name'], axis=1, inplace=True)
-    new_passenger.drop(['embarked'], axis=1, inplace=True)
-    aliveProb = np.squeeze(self.logreg.predict_proba(new_passenger))
-
-    # more code here
-    # interact with 
-    return aliveProb
 # Sample usage without API
-if __name__ == "__main__":
-    # Initialize the Titanic model
-    initTitanic()
